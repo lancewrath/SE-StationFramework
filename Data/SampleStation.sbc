@@ -1,0 +1,23 @@
+﻿<?xml version="1.0"?>
+<Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <EntityComponents>
+
+    <EntityComponent xsi:type="MyObjectBuilder_InventoryComponentDefinition">
+      <Id>
+        <TypeId>Inventory</TypeId>
+        <SubtypeId>[StationFramework]:Default</SubtypeId>
+      </Id>
+      <Description>       
+        [PopulationDef xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"]
+        [DefinitionName]Default Station[/DefinitionName]
+        [FactionContains]{B}[/FactionContains]
+        [PopulationMin]1[/PopulationMin]
+        [PopulationMax]10[/PopulationMax]
+        [StationType]DEFAULT[/StationType]
+        [/PopulationDef]
+      </Description>
+
+    </EntityComponent>
+
+  </EntityComponents>
+</Definitions>
