@@ -32,7 +32,7 @@ namespace StationFramework.Population
             ListReader<MyComponentDefinitionBase> entComps = MyDefinitionManager.Static.GetEntityComponentDefinitions();
             foreach (var def in entComps)
             {
-                if (def.Id.SubtypeId.String.Contains("[StationFramework]"))
+                if (def.Id.SubtypeId.String.Contains("[PersonalityDef]"))
                 {
                     
                     string popdef = def.DescriptionString;
@@ -41,7 +41,7 @@ namespace StationFramework.Population
                     PopulationDef pdef = MyAPIGateway.Utilities.SerializeFromXML<PopulationDef>(popdef);
                     if(pdef != null)
                     {
-                        MyAPIGateway.Utilities.ShowMessage("SF", "Station Definition: " + pdef.DefinitionName);
+                        MyAPIGateway.Utilities.ShowMessage("PopulationDef", "Loaded: " + pdef.DefinitionName);
                         populationDefs.Add(pdef);
                     }
 
@@ -139,12 +139,12 @@ namespace StationFramework.Population
     [System.Serializable]
     public class PopulationDef
     {
-        public string DefinitionName = "Default Station";
+        public string DefinitionName = "Default Population";
         public string FactionContains = "";
         public int PopulationMin = 1;
         public int PopulationMax = 10;
-        public StationFrameworkType StationType = StationFrameworkType.DEFAULT;
-        public double Morale = 0.5;
+        //public StationFrameworkType StationType = StationFrameworkType.DEFAULT;
+        public double MoraleModifier = 0.5;
         public List<PeronalityType> PeronalityTypes = new List<PeronalityType>();
     }
 

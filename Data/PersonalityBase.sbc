@@ -5,15 +5,22 @@
     <EntityComponent xsi:type="MyObjectBuilder_InventoryComponentDefinition">
       <Id>
         <TypeId>Inventory</TypeId>
-        <SubtypeId>[Personality]:Default</SubtypeId>
+        <SubtypeId>[PersonalityDef]</SubtypeId>
       </Id>
       <Description>
         [PopulationDef xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"]
-        [DefinitionName]Default Station[/DefinitionName]
+        [DefinitionName]Population Standard[/DefinitionName]
         [FactionContains]{B}[/FactionContains]
         [PopulationMin]1[/PopulationMin]
         [PopulationMax]10[/PopulationMax]
-        [StationType]DEFAULT[/StationType]
+        [MoraleModifier]10[/MoraleModifier]
+        [PeronalityTypes]
+          [PeronalityType]Debater[/PeronalityType]
+          [PeronalityType]Commander[/PeronalityType]
+          [PeronalityType]Executive[/PeronalityType]
+          [PeronalityType]Defender[/PeronalityType]
+          [PeronalityType]Logician[/PeronalityType]        
+        [/PeronalityTypes]
         [/PopulationDef]
       </Description>
 

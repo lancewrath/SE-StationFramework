@@ -1,5 +1,4 @@
-﻿using Sandbox.Game.GameSystems.BankingAndCurrency;
-using Sandbox.ModAPI;
+﻿using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -318,6 +317,7 @@ namespace StationFramework
 
     #region HelperClasses
 
+
     public class StationsData
     {
         public List<StationData> stations = new List<StationData>();
@@ -350,6 +350,14 @@ namespace StationFramework
     #endregion
 
     #region SerializableClasses
+    [System.Serializable]
+    public class StationFrameworkDef
+    {
+        public string DefinitionName = "Default Population";
+        public string FactionContains = "";
+        public bool ProceduralStations = false;
+
+    }
 
     [System.Serializable]
     public class CustomStations

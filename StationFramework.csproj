@@ -35,6 +35,7 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="Data\Factions\FactionNames_Station.sbc" />
+    <None Include="Data\PersonalityBase.sbc" />
     <None Include="Data\SampleStation.sbc" />
   </ItemGroup>
   <ItemGroup>
@@ -81,10 +82,24 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\Scripts\Population\PopulationManager.cs" />
+    <Compile Include="Data\Scripts\Stations\StationCore\GeneratedStationInfo.cs" />
+    <Compile Include="Data\Scripts\Stations\StationCore\GenerationRequirements.cs" />
+    <Compile Include="Data\Scripts\Stations\StationCore\StationGenerator.cs" />
+    <Compile Include="Data\Scripts\Stations\StationCore\StationModel.cs" />
     <Compile Include="Data\Scripts\Stations\StationCore\StationSessionComponent.cs" />
+    <Compile Include="Data\Scripts\Stations\StationCore\StationTileType.cs" />
+    <Compile Include="Data\Seq2Seq\AttentionDecoder.cs" />
+    <Compile Include="Data\Seq2Seq\AttentionSeq2Seq.cs" />
+    <Compile Include="Data\Seq2Seq\AttentionUnit.cs" />
     <Compile Include="Data\Seq2Seq\ComputeGraph.cs" />
+    <Compile Include="Data\Seq2Seq\ContextDecoder.cs" />
+    <Compile Include="Data\Seq2Seq\CostEventArg.cs" />
+    <Compile Include="Data\Seq2Seq\Decoder.cs" />
     <Compile Include="Data\Seq2Seq\Encoder.cs" />
+    <Compile Include="Data\Seq2Seq\LSTMAttentionDecoderCell.cs" />
     <Compile Include="Data\Seq2Seq\LSTMCell.cs" />
+    <Compile Include="Data\Seq2Seq\LSTMContextDecoderCell.cs" />
+    <Compile Include="Data\Seq2Seq\Optimizer.cs" />
     <Compile Include="Data\Seq2Seq\WeightMatrix.cs" />
   </ItemGroup>
   <ItemGroup>
