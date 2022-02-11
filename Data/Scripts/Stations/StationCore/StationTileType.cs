@@ -110,6 +110,15 @@ namespace StationFramework
 
     }
 
+    [System.Serializable]
+    public enum OrientationEnum
+    {
+
+        Automatic, Northbound, Southbound, Eastbound, Westbound, Random
+
+
+    }
+
     public class IgnoreNeighborhood
     {
 
@@ -206,6 +215,151 @@ namespace StationFramework
             toret.below = true;
 
             return toret;
+        }
+    }
+
+    [Serializable]
+    public class NeighborRequirements : ICloneable
+    {
+
+
+        public StationTileType north;
+
+        public StationTileType northeast;
+        
+        public StationTileType northwest;
+        
+        public StationTileType south;
+        
+        public StationTileType southeast;
+        
+        public StationTileType southwest;
+        
+        public StationTileType east;
+        
+        public StationTileType west;
+        
+        public StationTileType center;
+        
+        public StationTileType above;
+        
+        public StationTileType below;
+
+        
+        public bool patternRotated;
+
+        
+        public bool invertedPatternMode;
+
+        
+        public sbyte levelOffset;
+
+        
+        public sbyte xOffset;
+
+        
+        public sbyte yOffset;
+
+
+        public NeighborRequirements()
+        {
+            this.northwest = StationTileType.NOREQUIREMENT;
+            this.north = StationTileType.NOREQUIREMENT;
+            this.northeast = StationTileType.NOREQUIREMENT;
+            this.west = StationTileType.NOREQUIREMENT;
+            this.center = StationTileType.NOREQUIREMENT;
+            this.east = StationTileType.NOREQUIREMENT;
+            this.southwest = StationTileType.NOREQUIREMENT;
+            this.south = StationTileType.NOREQUIREMENT;
+            this.southeast = StationTileType.NOREQUIREMENT;
+            this.above = StationTileType.NOREQUIREMENT;
+            this.below = StationTileType.NOREQUIREMENT;
+            this.invertedPatternMode = false;
+        }
+
+        public NeighborRequirements(StationTileType northwest, StationTileType north, StationTileType northeast, StationTileType west, StationTileType center, StationTileType east, StationTileType southwest, StationTileType south, StationTileType southeast, bool invert)
+        {
+            this.northwest = northwest;
+            this.north = north;
+            this.northeast = northeast;
+            this.west = west;
+            this.center = center;
+            this.east = east;
+            this.southwest = southwest;
+            this.south = south;
+            this.southeast = southeast;
+            this.invertedPatternMode = invert;
+        }
+
+        public void initEastboundVariant()
+        {
+            patternRotated = true;
+
+            StationTileType temp = northeast;
+            northeast = northwest;
+            northwest = southwest;
+            southwest = southeast;
+            southeast = temp;
+
+            temp = east;
+            east = north;
+            north = west;
+            west = south;
+            south = temp;
+
+        }
+
+        public void initSouthboundVariant()
+        {
+            patternRotated = true;
+
+            StationTileType temp = southeast;
+            southeast = northwest;
+            northwest = temp;
+
+            temp = south;
+            south = north;
+            north = temp;
+
+            temp = southwest;
+            southwest = northeast;
+            northeast = temp;
+
+            temp = west;
+            west = east;
+            east = temp;
+
+
+        }
+
+        public void initWestboundVariant()
+        {
+            patternRotated = true;
+
+            StationTileType temp = southwest;
+            southwest = northwest;
+            northwest = northeast;
+            northeast = southeast;
+            southeast = temp;
+
+            temp = west;
+            west = north;
+            north = east;
+            east = south;
+            south = temp;
+
+        }
+
+        public object Clone()
+        {
+            NeighborRequirements reqs = new NeighborRequirements(this.northwest, this.north, this.northeast, this.west, this.center, this.east, this.southwest, this.south, this.southeast, this.invertedPatternMode);
+            reqs.above = this.above;
+            reqs.below = this.below;
+            reqs.patternRotated = this.patternRotated;
+            reqs.levelOffset = this.levelOffset;
+            reqs.xOffset = this.xOffset;
+            reqs.yOffset = this.yOffset;
+            return reqs;
         }
     }
 

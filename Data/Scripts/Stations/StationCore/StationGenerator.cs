@@ -96,9 +96,41 @@ namespace StationFramework
         bool useSavedStation = false;
         public bool randomTriggerIExec = false;
         public bool cleanDeadends = true;
-
-
+        public bool addFloor = true;
+        public bool addCeiling = true, addWall = true, addEntrances = false, addLargeCargo = false, addSmallCargo = false, addReactor = false, addBattery = false, addfunctionals = false, addHangar = false, addGate = false, addLight = false, addLCD = false, addLCD2 = false, addStairs = false, addChair = false;
+        public IMyCubeGrid[,,] nodes;
+        public Vector3D nodeSize = new Vector3(3, 3, 3);
+        public float floorHeight = 1;
         //public GameObject[,,] nodes;
+
+        public Vector3D floorTranslation = new Vector3D(0, -2, 0);
+        public Vector3D ceilingTranslation = new Vector3D(0, 2, 0);
+        public Vector3D wallTranslation = new Vector3D(0, 0, 0);
+        public Vector3D entranceTranslation = new Vector3D(0, -2, 0);
+        public Vector3D stairsTranslation = new Vector3D(0, 1, 0);
+        public Vector3D lightTranslation = new Vector3D(0, 0.2, -1.48);
+        public Vector3D largeCargoTranslation = new Vector3D(0, -0.5, -1.2);
+        public Vector3D smallCargoTranslation = new Vector3D(0, -1.5, -1.2);
+        public Vector3D reactorTranslation = new Vector3D(0, -1.5, -1);
+        public Vector3D batteryTranslation = new Vector3D(0, -1.5, -1);
+        public Vector3D lcdTranslation = new Vector3D(0, 0.2f, -1.5);
+        public Vector3D functionalsTranslation = new Vector3D(0, 0, 0);
+        public Vector3D hangarTranslation = new Vector3D(0, 0, -1.2);
+        public Vector3D chairTranslation = new Vector3D(0, -1.4, 0);
+        public Vector3 currentTranslationV3 = Vector3.Zero;
+
+        public bool lightRelative = true;
+        public bool largeCargoRelative = true;
+        public bool smallCargoRelative = true;
+        public bool reactorRelative = true;
+        public bool batteryRelative = true;
+        public bool lcdRelative = true;
+        public bool hangarRelative = true;
+
+        public string floor;
+        public string ceiling, solidwall, door, lcargo, scargo, reactor, battery, functionals, hangar, gate, light, lcd1, lcd2, stairs, chair;
+
+        public List<NodeGrid> nodeGrids = new List<NodeGrid>();
 
         #endregion vars
 
@@ -436,6 +468,7 @@ namespace StationFramework
 
         public void SpawnStationTiles()
         {
+            
             if (startBlock == null)
                 return;
 
@@ -445,6 +478,9 @@ namespace StationFramework
             if (blocks.Count == 0)
                 return;
 
+            Vector3D startpos = startBlock.GetPosition();
+
+
             for (int i = 0; i < width; i++)
             {
                 for (int j = 0; j < height; j++)
@@ -452,15 +488,538 @@ namespace StationFramework
                     for (int l = 0; l < levels; l++)
                     {
 
-                        PlacePrefabOnGrid(i, j, l, blocks[0]);
+                        PlacePrefabOnGrid(i, j, l, startpos);
 
                     }
                 }
             }
         }
 
-        public void PlacePrefabOnGrid(int i, int j, int l, IMySlimBlock start)
+        public void PlacePrefabOnGrid(int i, int j, int l,Vector3D startpos)
         {
+            int n;
+            int ol = l;//original level, used with offset
+            int oi = i, oj = j;//original position offsets
+
+            StationTileType center, north, south, east, west, southeast, southwest, northeast, northwest, above, below;
+
+            bool requirementsMet;
+            int direction;
+            bool horizontal;
+            bool rotated;
+            bool randOrientation;
+            bool matchNorth, matchSouth, matchEast, matchWest;
+            bool usingOffsetNeighbors = false;
+
+            OrientationEnum pickedOrientation;
+
+            List<OrientationEnum> matchedOrientations = new List<OrientationEnum>();
+
+            Dictionary<int, int> orientationCount;//Uses orientation enum int value as key, amount of matched patterns for orientation as val
+
+            NeighborRequirements originalRequirements;
+
+            OrientationEnum lastChecked;
+
+            Boolean directionalPreset;
+            Boolean northpreset, southpreset, eastpreset, westpreset;
+            Boolean customOrientation;
+
+            n = random.Next(200);
+
+            center = StationTileType.NOTLOADED;
+            north = StationTileType.NOTLOADED;
+            northwest = StationTileType.NOTLOADED;
+            northeast = StationTileType.NOTLOADED;
+            south = StationTileType.NOTLOADED;
+            southeast = StationTileType.NOTLOADED;
+            southwest = StationTileType.NOTLOADED;
+            west = StationTileType.NOTLOADED;
+            east = StationTileType.NOTLOADED;
+            above = StationTileType.NOTLOADED;
+            below = StationTileType.NOTLOADED;
+
+            TryGetNeighbors(i, j, l, ref center, ref north, ref northeast, ref northwest, ref east, ref west, ref south, ref southeast, ref southwest, ref above, ref below);
+            
+            if (center == StationTileType.Empty)
+            {
+
+                if ((north == StationTileType.Empty || north == StationTileType.ERROR) &&
+                    (northeast == StationTileType.Empty || northeast == StationTileType.ERROR) &&
+                    (northwest == StationTileType.Empty || northwest == StationTileType.ERROR) &&
+                    (east == StationTileType.Empty || east == StationTileType.ERROR) &&
+                    (west == StationTileType.Empty || west == StationTileType.ERROR) &&
+                    (southeast == StationTileType.Empty || southeast == StationTileType.ERROR) &&
+                    (south == StationTileType.Empty || south == StationTileType.ERROR) &&
+                    (southwest == StationTileType.Empty || southwest == StationTileType.ERROR))
+                {
+                    //Entirely unneeded wall avoided
+                }
+                else if (addWall)
+                {
+                    //Spawn Wall Grid
+                    //newWall(i, j, l, nodes[l, i, j].transform.GetChild(0).gameObject);
+                }
+
+            }
+            //Place ceiling, floor and stairs
+            if (center != StationTileType.Empty && center != StationTileType.Stairs)
+            {
+                if (addFloor && below != StationTileType.Stairs) newFloor(i, j, l, startpos, true);
+                if (addCeiling) newFloor(i, j, l, startpos, false);
+
+                if (addLight && center != StationTileType.Room && center != StationTileType.Room2 && center != StationTileType.Entrance && center != StationTileType.Entrance2)
+                {
+                    if (west == StationTileType.Empty && (random.Next(10) < 1)) newLight(i, j, l, startpos, -1, true);
+                    if (east == StationTileType.Empty && (random.Next(10) < 1)) newLight(i, j, l, startpos, 1, true);
+                    if (north == StationTileType.Empty && (random.Next(10) < 1)) newLight(i, j, l, startpos, -1, false);
+                    if (south == StationTileType.Empty && (random.Next(10) < 1)) newLight(i, j, l, startpos, 1, false);
+                }
+
+            }
+            if (center == StationTileType.Stairs)
+            {
+                if (addFloor) newFloor(i, j, l, startpos, true);
+                if (addStairs) newStairs(i, j, l, startpos);
+            }
+            //Place entrances and doors
+            if (center == StationTileType.Entrance || center == StationTileType.Entrance2 && addEntrances)
+            {
+                if (north == StationTileType.Empty && south == StationTileType.Empty)
+                    newEntrance(i, j, l, startpos, 1, true);
+                else if (west == StationTileType.Empty && east == StationTileType.Empty)
+                {
+                    newEntrance(i, j, l, startpos, 1, false);
+                }
+            }
+            if (StationTileTypeUtils.IsTileTypeMatching(StationTileType.ANYROOM, center))
+            {
+                //Here you can add props to the rooms
+
+                if (below == StationTileType.Empty || below == StationTileType.BossRaised || l == 0)//Is the level empty undernearth this tile ( tall ceiling demo check )
+                {
+                    //Add functional block type
+
+                    if (n % 10 == 0 && addfunctionals)
+                    {
+                        if (north != StationTileType.Empty && east != StationTileType.Empty && west != StationTileType.Empty && south != StationTileType.Empty && northeast != StationTileType.Empty && northwest != StationTileType.Empty && southeast != StationTileType.Empty && southwest != StationTileType.Empty)
+                        {
+                            newFunctional(i, j, l, startpos, 1, false);
+                        }
+                    }
+
+
+                    //Add a Chair type
+
+                    if (n % 11 == 0 && addChair)
+                    {
+                        if (north != StationTileType.Empty && east != StationTileType.Empty && west != StationTileType.Empty && south != StationTileType.Empty)
+                        {
+                            newChair(i, j, l, startpos, 1, false);
+                        }
+                    }
+
+
+                    //Add a cargo or other storage type
+                    if (n % 6 == 0 && (addLargeCargo || addSmallCargo))
+                    {
+                        if (addLargeCargo && n % 4 == 0)
+                        {
+                            if (north == StationTileType.Empty) newLargeCargo(i, j, l, startpos, -1, false);
+                            else if (south == StationTileType.Empty) newLargeCargo(i, j, l, startpos, 1, false);
+                            else if (west == StationTileType.Empty) newLargeCargo(i, j, l, startpos, -1, true);
+                            else if (east == StationTileType.Empty) newLargeCargo(i, j, l, startpos, 1, true);
+                        }
+                        else if (addSmallCargo)
+                        {
+                            if (north == StationTileType.Empty) newSmallCargo(i, j, l, startpos, -1, false);
+                            else if (south == StationTileType.Empty) newSmallCargo(i, j, l, startpos, 1, false);
+                            else if (west == StationTileType.Empty) newSmallCargo(i, j, l, startpos, -1, true);
+                            else if (east == StationTileType.Empty) newSmallCargo(i, j, l, startpos, 1, true);
+                        }
+
+                    }
+                    else if (addReactor && n % 7 == 0 && n % 6 != 0)
+                    {
+                        if (north == StationTileType.Empty) newReactor(i, j, l, startpos, -1, false);
+                        else if (south == StationTileType.Empty) newReactor(i, j, l, startpos, 1, false);
+                        else if (west == StationTileType.Empty) newReactor(i, j, l, startpos, -1, true);
+                        else if (east == StationTileType.Empty) newReactor(i, j, l, startpos, 1, true);
+                    }
+                    else if (addBattery && n % 8 == 0 && n % 6 != 0)
+                    {
+                        if (north == StationTileType.Empty) newBattery(i, j, l, startpos, -1, false);
+                        else if (south == StationTileType.Empty) newBattery(i, j, l, startpos, 1, false);
+                        else if (west == StationTileType.Empty) newBattery(i, j, l, startpos, -1, true);
+                        else if (east == StationTileType.Empty) newBattery(i, j, l, startpos, 1, true);
+                    }
+
+                    //Add Painting
+                    if (n % 11 == 0)
+                    {
+                        if (north == StationTileType.Empty) newLCD1(i, j, l, startpos, -1, false);
+                        else if (south == StationTileType.Empty) newLCD1(i, j, l, startpos, 1, false);
+                        else if (west == StationTileType.Empty) newLCD1(i, j, l, startpos, -1, true);
+                        else if (east == StationTileType.Empty) newLCD1(i, j, l, startpos, 1, true);
+                    }
+                    else if (n % 12 == 0)
+                    {
+                        if (north == StationTileType.Empty) newLCD2(i, j, l, startpos, -1, false);
+                        else if (south == StationTileType.Empty) newLCD2(i, j, l, startpos, 1, false);
+                        else if (west == StationTileType.Empty) newLCD2(i, j, l, startpos, -1, true);
+                        else if (east == StationTileType.Empty) newLCD2(i, j, l, startpos, 1, true);
+                    }
+
+
+
+                    /*
+                    //Add a locked cell
+                    if (addHangar || addGate)
+                    {
+
+                        if (!v2Planar)
+                        {
+                            if (south == StationTileType.Empty && west == StationTileType.Empty && east == StationTileType.Empty) newCell(i, j, l, startpos, 1, false, n);
+                            if (north == StationTileType.Empty && west == StationTileType.Empty && east == StationTileType.Empty) newCell(i, j, l, startpos, -1, false, n);
+                            if (north == StationTileType.Empty && south == StationTileType.Empty && east == StationTileType.Empty) newCell(i, j, l, startpos, 1, true, n);
+                            if (north == StationTileType.Empty && south == StationTileType.Empty && west == StationTileType.Empty) newCell(i, j, l, startpos, -1, true, n);
+
+                        }
+                        else
+                        {
+                            if (south == StationTileType.Empty && west == StationTileType.Empty && east == StationTileType.Empty && (above == StationTileType.Empty || above == StationTileType.ERROR) && (below == StationTileType.Empty || below == StationTileType.ERROR)) newCell(i, j, l, startpos, 1, false, n);
+                            if (north == StationTileType.Empty && west == StationTileType.Empty && east == StationTileType.Empty && (above == StationTileType.Empty || above == StationTileType.ERROR) && (below == StationTileType.Empty || below == StationTileType.ERROR)) newCell(i, j, l, startpos, -1, false, n);
+                            if (north == StationTileType.Empty && south == StationTileType.Empty && east == StationTileType.Empty && (above == StationTileType.Empty || above == StationTileType.ERROR) && (below == StationTileType.Empty || below == StationTileType.ERROR)) newCell(i, j, l, startpos, 1, true, n);
+                            if (north == StationTileType.Empty && south == StationTileType.Empty && west == StationTileType.Empty && (above == StationTileType.Empty || above == StationTileType.ERROR) && (below == StationTileType.Empty || below == StationTileType.ERROR)) newCell(i, j, l, startpos, -1, true, n);
+
+                        }
+
+                    }
+                    */
+
+                }
+
+
+
+            }
+
+
+
+        }
+
+        void newLCD2(int i, int j, int l, Vector3D pos, int direction, bool horizontal)
+        {
+            if (!addLCD2) { return; }
+
+            NodeGrid ng = new NodeGrid(i, j, l, this);
+
+            Vector3 center = getNodeCenter(i, j, l);
+            currentTranslationV3 = lcdTranslation;
+            Vector3 newrotation = Vector3.Zero;
+
+            if (lcdRelative)
+            {
+                if (horizontal)
+                {
+                    currentTranslationV3 = new Vector3(-currentTranslationV3.Z * direction, currentTranslationV3.Y, currentTranslationV3.X * direction);
+                    newrotation = Vector3.Normalize(new Vector3(0, 90 * -direction, 0));
+                }
+                else
+                {
+                    currentTranslationV3 = new Vector3(currentTranslationV3.X * direction, currentTranslationV3.Y, currentTranslationV3.Z * direction);
+                    if (direction < 0)
+                        newrotation = Vector3.Normalize(new Vector3(0, 180, 0));
+                }
+            }
+
+
+            Vector3 newpos = pos + center + currentTranslationV3;
+            MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, lcd2, newpos, newrotation, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+            nodeGrids.Add(ng);
+        }
+
+        void newLCD1(int i, int j, int l, Vector3D pos, int direction, bool horizontal)
+        {
+            if (!addLCD) { return; }
+
+            NodeGrid ng = new NodeGrid(i, j, l, this);
+
+            Vector3 center = getNodeCenter(i, j, l);
+            currentTranslationV3 = lcdTranslation;
+            Vector3 newrotation = Vector3.Zero;
+
+            if (lcdRelative)
+            {
+                if (horizontal)
+                {
+                    currentTranslationV3 = new Vector3(-currentTranslationV3.Z * direction, currentTranslationV3.Y, currentTranslationV3.X * direction);
+                    newrotation = Vector3.Normalize(new Vector3(0, 90 * -direction, 0));
+                }
+                else
+                {
+                    currentTranslationV3 = new Vector3(currentTranslationV3.X * direction, currentTranslationV3.Y, currentTranslationV3.Z * direction);
+                    if (direction < 0)
+                        newrotation = Vector3.Normalize(new Vector3(0, 180, 0));
+                }
+            }
+
+
+            Vector3 newpos = pos + center + currentTranslationV3;
+            MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, lcd1, newpos, newrotation, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+            nodeGrids.Add(ng);
+        }
+
+
+        void newBattery(int i, int j, int l, Vector3D pos, int direction, bool horizontal)
+        {
+            if (!addBattery) { return; }
+            NodeGrid ng = new NodeGrid(i, j, l, this);
+
+            Vector3 center = getNodeCenter(i, j, l);
+            currentTranslationV3 = reactorTranslation;
+            Vector3 newrotation = Vector3.Zero;
+
+            if (batteryRelative)
+            {
+                if (horizontal)
+                {
+                    currentTranslationV3 = new Vector3(-currentTranslationV3.Z * direction, currentTranslationV3.Y, currentTranslationV3.X * direction);
+                    newrotation = Vector3.Normalize(new Vector3(0, 90 * -direction, 0));
+                }
+                else
+                {
+                    currentTranslationV3 = new Vector3(currentTranslationV3.X * direction, currentTranslationV3.Y, currentTranslationV3.Z * direction);
+                    if (direction < 0)
+                        newrotation = Vector3.Normalize(new Vector3(0, 180, 0));
+                }
+            }
+
+
+            Vector3 newpos = pos + center + currentTranslationV3;
+            MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, battery, newpos, newrotation, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+            nodeGrids.Add(ng);
+        }
+
+
+        void newReactor(int i, int j, int l, Vector3D pos, int direction, bool horizontal)
+        {
+            if (!addReactor) { return; }
+            NodeGrid ng = new NodeGrid(i, j, l, this);
+
+            Vector3 center = getNodeCenter(i, j, l);
+            currentTranslationV3 = reactorTranslation;
+            Vector3 newrotation = Vector3.Zero;
+
+
+            if (reactorRelative)
+            {
+                if (horizontal)
+                {
+                    currentTranslationV3 = new Vector3(-currentTranslationV3.Z * direction, currentTranslationV3.Y, currentTranslationV3.X * direction);
+                    newrotation = Vector3.Normalize(new Vector3(0, 90 * -direction, 0));
+                }
+                else
+                {
+                    currentTranslationV3 = new Vector3(currentTranslationV3.X * direction, currentTranslationV3.Y, currentTranslationV3.Z * direction);
+                    if (direction < 0)
+                        newrotation = Vector3.Normalize(new Vector3(0, 180, 0));
+                }
+            }
+
+
+            Vector3 newpos = pos + center + currentTranslationV3;
+            MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, reactor, newpos, newrotation, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+            nodeGrids.Add(ng);
+        }
+
+        void newSmallCargo(int i, int j, int l, Vector3D pos, int direction, bool horizontal)
+        {
+            if (!addSmallCargo) { return; }
+            NodeGrid ng = new NodeGrid(i, j, l, this);
+
+            Vector3 center = getNodeCenter(i, j, l);
+            currentTranslationV3 = smallCargoTranslation;
+            Vector3 newrotation = Vector3.Zero;
+
+
+
+            if (smallCargoRelative)
+            {
+                if (horizontal)
+                {
+                    currentTranslationV3 = new Vector3(-currentTranslationV3.Z * direction, currentTranslationV3.Y, currentTranslationV3.X * direction);
+                    newrotation = Vector3.Normalize(new Vector3(0, 90 * -direction, 0));
+                }
+                else
+                {
+                    currentTranslationV3 = new Vector3(currentTranslationV3.X * direction, currentTranslationV3.Y, currentTranslationV3.Z * direction);
+                    if (direction < 0)
+                        newrotation = Vector3.Normalize(new Vector3(0, 180, 0));
+                }
+            }
+
+
+            Vector3 newpos = pos + center + currentTranslationV3;
+            MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, scargo, newpos, newrotation, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+            nodeGrids.Add(ng);
+        }
+
+        void newLargeCargo(int i, int j, int l, Vector3D pos, int direction, bool horizontal)
+        {
+            if (!addLargeCargo) { return; }
+
+            NodeGrid ng = new NodeGrid(i, j, l, this);
+
+            Vector3 center = getNodeCenter(i, j, l);
+            currentTranslationV3 = largeCargoTranslation;
+            Vector3 newrotation = Vector3.Zero;
+
+
+
+
+            if (largeCargoRelative)
+            {
+                if (horizontal)
+                {
+                    currentTranslationV3 = new Vector3(-currentTranslationV3.Z * direction, currentTranslationV3.Y, currentTranslationV3.X * direction);
+                    newrotation = Vector3.Normalize(new Vector3(0, 90 * -direction, 0));
+                }
+                else
+                {
+                    currentTranslationV3 = new Vector3(currentTranslationV3.X * direction, currentTranslationV3.Y, currentTranslationV3.Z * direction);
+                    if (direction < 0)
+                        newrotation = Vector3.Normalize(new Vector3(0, 180, 0));
+
+                }
+            }
+
+            Vector3 newpos = pos + center + currentTranslationV3;
+            MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, lcargo, newpos, newrotation, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+            nodeGrids.Add(ng);
+
+
+        }
+
+        void newChair(int i, int j, int l, Vector3D pos, int direction, bool horizontal)
+        {
+            if (!addChair) { return; }
+
+            NodeGrid ng = new NodeGrid(i, j, l, this);
+
+            Vector3 center = getNodeCenter(i, j, l);
+            currentTranslationV3 = chairTranslation;
+            Vector3 newpos = pos + center + currentTranslationV3;
+            MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, chair, newpos, Vector3.Forward, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+
+            nodeGrids.Add(ng);
+        }
+
+        void newStairs(int i, int j, int l, Vector3D pos)
+        {
+            if (!addStairs)
+            {
+                return;
+            }
+
+            NodeGrid ng = new NodeGrid(i, j, l, this);
+            Vector3 center = getNodeCenter(i, j, l);
+            currentTranslationV3 = stairsTranslation;
+            Vector3 newpos = pos + center + currentTranslationV3;
+
+            MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, stairs, newpos, Vector3.Forward, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+
+            nodeGrids.Add(ng);
+        }
+
+        void newFunctional(int i, int j, int l, Vector3D pos, int direction, bool horizontal)
+        {
+            if (!addfunctionals) { return; }
+
+            NodeGrid ng = new NodeGrid(i, j, l, this);
+
+            Vector3 center = getNodeCenter(i, j, l);
+            currentTranslationV3 = functionalsTranslation;
+            Vector3 newpos = pos + center + currentTranslationV3;
+            Vector3 newrotation = Vector3.Normalize(new Vector3(0, random.Next(4) * 90, 0));
+
+            MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, functionals, newpos, newrotation, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+            nodeGrids.Add(ng);
+
+        }
+
+        void newEntrance(int i, int j, int l, Vector3D pos, int direction, bool horizontal)
+        {
+            if (!addEntrances) { return; }
+
+            NodeGrid ng = new NodeGrid(i, j, l, this);
+ 
+            Vector3 center = getNodeCenter(i, j, l);
+
+            currentTranslationV3 = entranceTranslation;
+            Vector3 newrotation = Vector3.Forward;
+            Vector3 newpos = pos + center + currentTranslationV3;
+
+            if (horizontal) newrotation = Vector3.Normalize(new Vector3(0, 90, 0));
+
+            MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, door, newpos, newrotation, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+            nodeGrids.Add(ng);
+
+        }
+
+        void newLight(int i, int j, int l, Vector3D pos, int direction, bool horizontal)
+        {
+            if (!addLight) { return; }
+
+            NodeGrid ng = new NodeGrid(i, j, l, this);
+
+            Vector3 center = getNodeCenter(i, j, l);
+            Vector3 newpos = pos;
+            Vector3 newrotation = Vector3.Forward;
+            currentTranslationV3 = lightTranslation;
+
+            if (lightRelative)
+            {
+                if (horizontal)
+                {
+                    currentTranslationV3 = new Vector3(-currentTranslationV3.Z * direction, currentTranslationV3.Y, currentTranslationV3.X * direction);
+                    newpos = center + currentTranslationV3 + pos;
+                    newrotation = new Vector3(0, 90 * -direction, 0);
+                }
+                else
+                {
+                    currentTranslationV3 = new Vector3(currentTranslationV3.X * direction, currentTranslationV3.Y, currentTranslationV3.Z * direction);
+                    newpos = center + currentTranslationV3;
+                    if (direction < 0)
+                        newrotation=new Vector3D(0, 180, 0);
+                }
+            }
+
+            MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, light, newpos, Vector3.Normalize(newrotation), Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+            nodeGrids.Add(ng);
+
+        }
+
+        void newFloor(int i, int j, int l, Vector3D pos, bool flr)
+        {
+            if (!addFloor && !addCeiling) { return; }
+            NodeGrid ng = null;
+            Vector3D center = getNodeCenter(i, j, l);
+            if (flr)
+            {
+                Vector3D newpos = center + pos + floorTranslation;
+                ng = new NodeGrid(i, j,l,this);
+                MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, floor, newpos, Vector3.Forward, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+
+            }
+            else
+            {
+                Vector3D newpos = center + pos + ceilingTranslation;
+                ng = new NodeGrid(i, j, l, this);
+                MyAPIGateway.PrefabManager.SpawnPrefab(ng.cubeGrids, ceiling, newpos, Vector3.Forward, Vector3.Up, Vector3.Zero, Vector3.Zero, "None", SpawningOptions.UseGridOrigin | SpawningOptions.SpawnRandomCargo | SpawningOptions.SetNeutralOwner, true, ng.GridSpawned);
+
+            }
+            if(ng!=null)
+                nodeGrids.Add(ng);
 
         }
 
@@ -1317,6 +1876,13 @@ namespace StationFramework
 
         #region Neighbor
 
+        public Vector3D getNodeCenter(int i, int j, int l)
+        {
+            return new Vector3D((i * (nodeSize.X) - (width / 2 * (nodeSize.X))) //NODE X
+                , ((floorHeight * 2) + ((l) * (nodeSize.Y + (floorHeight * 2)))),//NODE FLOOR
+                (j * (nodeSize.Z) - (height / 2 * (nodeSize.Z))));//NODE Y
+        }
+
         public StationTileNeighborhood getNeighbors(int x, int y, int l)
         {
             StationTileNeighborhood currentNeighborhood = new StationTileNeighborhood();
@@ -1814,7 +2380,113 @@ namespace StationFramework
             return (data[x, y, l] == StationTileType.Empty);
         }
 
+        void TryGetNeighbors(int i, int j, int l, ref StationTileType center, ref StationTileType north, ref StationTileType northeast, ref StationTileType northwest, ref StationTileType east, ref StationTileType west, ref StationTileType south, ref StationTileType southeast, ref StationTileType southwest, ref StationTileType above, ref StationTileType below)
+        {
+            //Finding neighbors
+            #region FindNeighbors
 
+            try
+            {
+                center = data[l, i, j];
+
+            }
+            catch
+            {
+                center = StationTileType.ERROR;
+            }
+
+            try
+            {
+                north = data[l, i, j + 1];
+
+            }
+            catch
+            {
+                north = StationTileType.ERROR;
+            }
+
+            try
+            {
+                northeast = data[l, i + 1, j + 1];
+
+            }
+            catch
+            {
+                northeast = StationTileType.ERROR;
+            }
+            try
+            {
+                northwest = data[l, i - 1, j + 1];
+
+            }
+            catch
+            {
+                northwest = StationTileType.ERROR;
+            }
+            try
+            {
+                south = data[l, i, j - 1];
+
+            }
+            catch
+            {
+                south = StationTileType.ERROR;
+            }
+            try
+            {
+                southeast = data[l, i + 1, j - 1];
+
+            }
+            catch
+            {
+                southeast = StationTileType.ERROR;
+            }
+            try
+            {
+                southwest = data[l, i - 1, j - 1];
+
+            }
+            catch
+            {
+                southwest = StationTileType.ERROR;
+            }
+            try
+            {
+                west = data[l, i - 1, j];
+
+            }
+            catch
+            {
+                west = StationTileType.ERROR;
+            }
+            try
+            {
+                east = data[l, i + 1, j];
+            }
+            catch
+            {
+                east = StationTileType.ERROR;
+            }
+
+            try
+            {
+                above = data[l + 1, i, j];
+            }
+            catch
+            {
+                above = StationTileType.ERROR;
+            }
+
+            try
+            {
+                below = data[l - 1, i, j];
+            }
+            catch
+            {
+                below = StationTileType.ERROR;
+            }
+            #endregion
+        }
         #endregion
 
         #region Placing
@@ -3262,6 +3934,31 @@ namespace StationFramework
         }
 
         #endregion
+    }
+
+    public class NodeGrid
+    {
+        public List<IMyCubeGrid> cubeGrids = new List<IMyCubeGrid>();
+        bool isSpawned = false;
+        int i, j, l;
+        public Action GridSpawned;
+        StationGenerator station = null;
+        public NodeGrid(int i, int j, int l, StationGenerator station)
+        {
+            this.i = i;
+            this.j = j;
+            this.l = l;
+            this.station = station;
+            GridSpawned = Spawned;
+        }
+
+        public void Spawned()
+        {
+            if (cubeGrids.Count > 0)
+            {
+                station.nodes[l, i, j] = cubeGrids[0];
+            }
+        }
     }
 
 
